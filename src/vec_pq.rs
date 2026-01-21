@@ -518,7 +518,7 @@ fn kmeans_plus_plus_init(vectors: &[Vec<f32>], k: usize) -> Result<Vec<Vec<f32>>
 
 /// Squared L2 distance between two vectors
 fn l2_distance_squared(a: &[f32], b: &[f32]) -> f32 {
-    a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum()
+    crate::simd::l2_distance_squared_simd(a, b)
 }
 
 #[cfg(test)]

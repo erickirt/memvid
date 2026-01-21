@@ -32,6 +32,9 @@ pub mod types;
 pub mod vec;
 pub mod vec_pq;
 
+// SIMD-accelerated distance calculations
+pub mod simd;
+
 #[cfg(feature = "vec")]
 pub mod text_embed;
 

@@ -84,9 +84,11 @@ byteorder = { version = "1.5", optional = true }
 
 # SymSpell for PDF text cleanup - fixes broken word spacing from PDF extraction
 symspell = { version = "0.4", optional = true }
+# SIMD acceleration for vector distance calculations
+wide = { version = "1.1", optional = true }
 
 [features]
-default = ["lex", "pdf_extract"]
+default = ["lex", "pdf_extract", "simd"]
 # pdf_oxide disabled - cff-parser panics on ligature fonts (uniFB01/uniFB02)
 # symspell_cleanup disabled - needs more work on preserving numbers/proper nouns
 lex = ["dep:tantivy"]
@@ -116,6 +118,8 @@ replay = []
 encryption = ["dep:argon2", "dep:aes-gcm", "dep:rand", "dep:zeroize"]
 # SymSpell-based PDF text cleanup - fixes broken word spacing
 symspell_cleanup = ["dep:symspell"]
+# SIMD acceleration for vector distance calculations
+simd = ["dep:wide"]
 
 [dev-dependencies]
 fastrand = "2.0"
@@ -128,3 +132,7 @@ required-features = ["vec"]
 [[example]]
 name = "text_embed_cache_bench"
 required-features = ["vec"]
+
+[[example]]
+name = "simd_benchmark"
+required-features = ["simd"]

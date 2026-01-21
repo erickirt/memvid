@@ -223,11 +223,7 @@ pub struct VecSearchHit {
 }
 
 fn l2_distance(a: &[f32], b: &[f32]) -> f32 {
-    a.iter()
-        .zip(b.iter())
-        .map(|(x, y)| (x - y).powi(2))
-        .sum::<f32>()
-        .sqrt()
+    crate::simd::l2_distance_simd(a, b)
 }
 
 #[cfg(test)]
