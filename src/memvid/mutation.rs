@@ -904,16 +904,25 @@ impl Memvid {
                         self.toc.frames.len()
                     );
 
-                    // Initialize Tantivy engine if not already present
+                    // If Tantivy engine already exists, frames were already indexed during put()
+                    // (at the add_frame call in put_bytes_with_options). Skip re-indexing to avoid
+                    // duplicates. Only initialize and index if Tantivy wasn't present during put.
+                    let tantivy_was_present = self.tantivy.is_some();
                     if self.tantivy.is_none() {
                         self.init_tantivy()?;
                     }
 
-                    // First, collect all frames and their search text (to avoid borrow conflicts)
-                    let max_payload = crate::memvid::search::max_index_payload();
-                    let mut prepared_docs: Vec<(Frame, String)> = Vec::new();
+                    // Skip indexing if Tantivy was already present - frames were indexed during put
+                    if tantivy_was_present {
+                        tracing::info!(
+                            "parallel_commit: skipping Tantivy indexing (already indexed during put)"
+                        );
+                    } else {
+                        // First, collect all frames and their search text (to avoid borrow conflicts)
+                        let max_payload = crate::memvid::search::max_index_payload();
+                        let mut prepared_docs: Vec<(Frame, String)> = Vec::new();
 
-                    for frame_id in &delta.inserted_frames {
+                        for frame_id in &delta.inserted_frames {
                         // Look up the actual Frame from the TOC
                         let frame = match self.toc.frames.get(*frame_id as usize) {
                             Some(f) => f.clone(),
@@ -971,6 +980,7 @@ impl Memvid {
                             "parallel_commit: Tantivy engine is None after init_tantivy"
                         );
                     }
+                    }  // end of else !tantivy_was_present
                 }
 
                 // Time index stores all entries together for timeline queries.
@@ -3389,10 +3399,14 @@ impl Memvid {
                 }
             }
 
-            if let Some(meta_json) = (!doc.metadata.is_null()).then(|| doc.metadata.to_string()) {
-                extra_metadata
-                    .entry("extractous_metadata".to_string())
-                    .or_insert(meta_json);
+            // Only add extractous_metadata when auto_tag is enabled
+            // This allows callers to disable metadata pollution by setting auto_tag=false
+            if options.auto_tag {
+                if let Some(meta_json) = (!doc.metadata.is_null()).then(|| doc.metadata.to_string()) {
+                    extra_metadata
+                        .entry("extractous_metadata".to_string())
+                        .or_insert(meta_json);
+                }
             }
         }
 

@@ -32,6 +32,7 @@ pub struct TantivyEngine {
 pub struct TantivyDocHit {
     pub frame_id: u64,
     pub score: f32,
+    #[allow(dead_code)] // Content preserved for debugging; evaluation uses frame metadata
     pub content: String,
 }
 

@@ -341,6 +341,13 @@ impl Memvid {
     }
 
     pub(crate) fn frame_content(&mut self, frame: &Frame) -> Result<String> {
+        // Check search_text first - this handles no_raw mode where payload is empty
+        // but search_text contains the indexed content
+        if let Some(search) = &frame.search_text {
+            if !search.is_empty() {
+                return Ok(search.clone());
+            }
+        }
         if frame.payload_length == 0 && frame.chunk_manifest.is_none() {
             return Ok(String::new());
         }

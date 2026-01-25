@@ -128,7 +128,6 @@ pub(super) fn try_tantivy_search(
             .ok_or(MemvidError::InvalidTimeIndex {
                 reason: "frame id out of range".into(),
             })?;
-        let _ = &hit.content;
         if let Some(uri_expected) = uri_filter {
             if !uri_matches(frame_meta.uri.as_deref(), uri_expected) {
                 continue;
@@ -151,23 +150,32 @@ pub(super) fn try_tantivy_search(
             }
         };
 
-        let content_lower = chunk_info.text.to_ascii_lowercase();
+        // Use the frame's search text for evaluation. While hit.content comes from Tantivy,
+        // it may have incorrect frame_id mappings due to indexing issues. The frame's search_text
+        // from TOC is authoritative for this frame_id.
+        let eval_text = frame_meta
+            .search_text
+            .as_deref()
+            .map(|s| s.to_ascii_lowercase())
+            .unwrap_or_else(|| chunk_info.text.to_ascii_lowercase());
 
-        // Skip redundant evaluation for text terms - Tantivy already matched them using stemming.
-        // We still need to evaluate field terms (uri, track, tags, etc.) to filter results.
+        // Evaluate the parsed query to filter results. This is necessary for:
+        // - Field terms (uri, track, tags, etc.) that Tantivy may have matched loosely
+        // - Text terms with AND logic (PR #178) - Tantivy matches each term independently,
+        //   but the parsed expression requires ALL terms to be present in the content
         let ctx = EvaluationContext {
             frame: &frame_meta,
-            content_lower: &content_lower,
+            content_lower: &eval_text,
         };
-        // Only evaluate if there are field terms; skip text-only queries since Tantivy already matched
-        if parsed.contains_field_terms() && !parsed.evaluate(&ctx) {
+        if !parsed.evaluate(&ctx) {
             tracing::debug!(
                 "tantivy hit {} culled: failed query evaluation",
                 frame_meta.id
             );
             continue;
         }
-        let occurrences = collect_token_occurrences(&content_lower, &stemmed_tokens);
+        // Use frame's search text for token occurrence matching as well
+        let occurrences = collect_token_occurrences(&eval_text, &stemmed_tokens);
         let slices = compute_snippet_slices(
             &chunk_info.text,
             &occurrences,

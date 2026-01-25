@@ -41,3 +41,5 @@ vector_embedding.txt
 
 models/
 *.DS_Store
+
+issue_overview.md
