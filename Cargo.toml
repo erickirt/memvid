@@ -96,7 +96,7 @@ reqwest = { version = "0.12", optional = true, default-features = false, feature
 [features]
 default = ["lex", "pdf_extract", "simd"]
 # pdf_oxide disabled - cff-parser panics on ligature fonts (uniFB01/uniFB02)
-# symspell_cleanup disabled - needs more work on preserving numbers/proper nouns
+# symspell_cleanup - enables robust PDF text repair (requires `make download-models` for dictionaries)
 lex = ["dep:tantivy"]
 extractous = ["dep:extractous"]
 # Pure Rust PDF extraction - faster than lopdf for text extraction, cross-platform

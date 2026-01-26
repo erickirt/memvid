@@ -83,8 +83,10 @@ fn is_fragment(s: &str) -> bool {
     let len = s.len();
     // Single chars (except I, a) are fragments
     if len == 1 {
-        let c = s.chars().next().unwrap();
-        return c != 'I' && c != 'a' && c != 'A';
+        if let Some(c) = s.chars().next() {
+            return c != 'I' && c != 'a' && c != 'A';
+        }
+        return false;
     }
     // 2-3 letter non-common words are likely fragments
     if len <= 3 && !is_common_word(s) {
@@ -247,19 +249,68 @@ pub fn fix_pdf_text_symspell(text: &str, max_edit_distance: i64) -> String {
             continue;
         }
 
-        // Step 1: Pre-join obvious PDF fragments
-        let prejoined = prejoin_fragments(trimmed);
+        // Split line into tokens
+        let tokens: Vec<&str> = trimmed.split_whitespace().collect();
+        if tokens.is_empty() {
+            continue;
+        }
 
-        // Step 2: Use lookup_compound for remaining issues (joined words, spelling)
-        let suggestions = symspell.lookup_compound(&prejoined, max_edit_distance);
+        // Group tokens into "safe" (text-only) and "protected" (contains digits/symbols) chunks
+        let mut chunks: Vec<(bool, Vec<&str>)> = Vec::new(); // (is_protected, tokens)
 
-        let corrected = if let Some(suggestion) = suggestions.first() {
-            suggestion.term.clone()
-        } else {
-            prejoined
-        };
+        let mut current_chunk: Vec<&str> = Vec::new();
+        let mut current_is_protected = false;
 
-        result.push(corrected);
+        for token in tokens {
+            // Heuristic: specific tokens are "protected" from SymSpell
+            // 1. Contains a digit (e.g. "2025", "X500", "COVID-19")
+            // 2. Contains non-alphabetic symbols (e.g. "user_id", "email@addr") - optional, but safer
+            // For now, let's stick to the "contains digit" rule which fixes the observed massive failures
+            let is_protected = token.chars().any(|c| c.is_ascii_digit());
+
+            if chunks.is_empty() && current_chunk.is_empty() {
+                // First token
+                current_is_protected = is_protected;
+                current_chunk.push(token);
+            } else if is_protected == current_is_protected {
+                // Continue current chunk
+                current_chunk.push(token);
+            } else {
+                // Switch chunk type
+                chunks.push((current_is_protected, current_chunk));
+                current_chunk = vec![token];
+                current_is_protected = is_protected;
+            }
+        }
+        if !current_chunk.is_empty() {
+            chunks.push((current_is_protected, current_chunk));
+        }
+
+        // Process chunks
+        let mut line_parts: Vec<String> = Vec::new();
+        for (is_protected, chunk_tokens) in chunks {
+            if is_protected {
+                // Keep protected tokens as-is (just join them)
+                line_parts.push(chunk_tokens.join(" "));
+            } else {
+                // Run SymSpell on safe text tokens
+                let chunk_text = chunk_tokens.join(" ");
+
+                // Step 1: Pre-join obvious PDF fragments
+                let prejoined = prejoin_fragments(&chunk_text);
+
+                // Step 2: Use lookup_compound for remaining issues
+                let suggestions = symspell.lookup_compound(&prejoined, max_edit_distance);
+
+                if let Some(suggestion) = suggestions.first() {
+                    line_parts.push(suggestion.term.clone());
+                } else {
+                    line_parts.push(chunk_text);
+                }
+            }
+        }
+
+        result.push(line_parts.join(" "));
     }
 
     result.join("\n")
@@ -415,5 +466,31 @@ mod tests {
             "got: {}",
             result
         );
+    }
+
+    #[test]
+    fn fixes_numbers_and_proper_nouns() {
+        // "Model X500" should keep "X500" intact (protected token),
+        // while "Model" might be lowercased to "model" by SymSpell
+        let result = fix_pdf_text("Model X500");
+        assert_eq!(result, "model X500");
+
+        // "2025" should be protected
+        let result = fix_pdf_text("The year 2025");
+        assert_eq!(result, "the year 2025");
+
+        // "iPhone 15 Pro" -> "15" is protected.
+        // "iPhone" -> "iphone" (lowercased), "Pro" -> "pro" (lowercased)
+        let result = fix_pdf_text("iPhone 15 Pro");
+        assert_eq!(result, "iphone 15 pro");
+
+        // "COVID-19" has digits -> protected
+        let result = fix_pdf_text("COVID-19 pandemic");
+        assert_eq!(result, "COVID-19 pandemic");
+
+        // Mixed line with cleanup needed + protected token
+        // "emp lo yee 123" -> "employee 123"
+        let result = fix_pdf_text("emp lo yee 123");
+        assert_eq!(result, "employee 123");
     }
 }

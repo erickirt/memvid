@@ -27,6 +27,13 @@ install: ## Install Rust toolchain and dependencies
 	@echo "$(CYAN)Installing cargo dependencies...$(NC)"
 	@$(CARGO) fetch
 
+download-models: ## Download required models and dictionaries
+	@echo "$(CYAN)Downloading SymSpell dictionaries...$(NC)"
+	@mkdir -p data
+	@curl -L https://raw.githubusercontent.com/wolfgarbe/SymSpell/master/SymSpell/frequency_dictionary_en_82_765.txt -o data/frequency_dictionary_en_82_765.txt
+	@curl -L https://raw.githubusercontent.com/wolfgarbe/SymSpell/master/SymSpell/frequency_bigramdictionary_en_243_342.txt -o data/frequency_bigramdictionary_en_243_342.txt
+
+
 check: ## Check code without building
 	@echo "$(CYAN)Checking code...$(NC)"
 	@$(CARGO) check --features $(FEATURES)

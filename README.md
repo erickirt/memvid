@@ -162,6 +162,7 @@ memvid-core = "2.0"
 | `temporal_track`    | Natural language date parsing ("last Tuesday")      |
 | `parallel_segments` | Multi-threaded ingestion                            |
 | `encryption`        | Password-based encryption capsules (.mv2e)          |
+| `symspell_cleanup`  | Robust PDF text repair (fixes "emp lo yee" -> "employee") |
 
 Enable features as needed:
 
