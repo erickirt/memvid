@@ -46,6 +46,18 @@
 
 <h2 align="center">⭐️ Leave a STAR to support the project ⭐️</h2>
 
+## Benchmark Highlights
+
+**🚀 Higher accuracy than any other memory system :** +35% SOTA on LoCoMo, best-in-class long-horizon conversational recall & reasoning
+
+**🧠 Superior multi-hop & temporal reasoning:**  +76% multi-hop, +56% temporal vs. the industry average
+
+**⚡ Ultra-low latency at scale** 0.025ms P50 and 0.075ms P99 vs Chroma, with 1,372× higher throughput
+
+**🔬 Fully reproducible benchmarks:** LoCoMo (10 × ~26K-token conversations), open-source eval, LLM-as-Judge
+
+
+
 ## What is Memvid?
 
 Memvid is a portable AI memory system that packages your data, embeddings, search structure, and metadata into a single file.
