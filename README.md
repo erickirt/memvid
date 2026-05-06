@@ -42,8 +42,6 @@
 </p>
 
 
-
-
 ## Benchmark Highlights
 
 **🚀 Higher accuracy than any other memory system :** +35% SOTA on LoCoMo, best-in-class long-horizon conversational recall & reasoning
